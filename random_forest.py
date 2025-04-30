@@ -7,13 +7,33 @@ from math import sqrt
 from itertools import product
 
 # === Încarcă datele ===
-df = pd.read_csv("Frogs_MFCCs.csv")  # pune numele real aici
+df = pd.read_csv("Frogs_MFCCs.csv") 
+
+# # === Eliminare outlieri folosind IQR ===
+# numeric_cols = df.select_dtypes(include=[np.number]).columns
+
+# Q1 = df[numeric_cols].quantile(0.25)
+# Q3 = df[numeric_cols].quantile(0.75)
+# IQR = Q3 - Q1
+
+# # Filtrare: păstrăm doar rândurile care NU sunt outlieri
+# df_clean = df[~((df[numeric_cols] < (Q1 - 1.5 * IQR)) | (df[numeric_cols] > (Q3 + 1.5 * IQR))).any(axis=1)]
+
+# print(f"Am eliminat {len(df) - len(df_clean)} outlieri din setul de date.")
+# df = df_clean.reset_index(drop=True)
+
+# df = df.drop(columns=['RecordID'])
+
+
+
 X = pd.get_dummies(df.iloc[:, :-1])
 y = df.iloc[:, -1]
 n_features = X.shape[1]
 
+
+
 # === Împărțire train/test ===
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
 
 # === Parametrii ===
 inbag_percents = [0.25, 0.40, 0.60, 0.75, 0.90]
@@ -73,16 +93,52 @@ print("\nRezultatele au fost salvate în fisierul 'rezultate_random_forest.csv'.
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Pregătim datele pentru heatmap
-pivot = results_df.pivot(index='inbag_percent', columns='max_features', values='accuracy')
+# # Pregătim datele pentru heatmap
+# pivot = results_df.pivot(index='inbag_percent', columns='max_features', values='accuracy')
 
-plt.figure(figsize=(10, 6))
-sns.heatmap(pivot, annot=True, fmt=".3f", cmap="YlGnBu", cbar_kws={'label': 'Accuracy'})
+# plt.figure(figsize=(10, 6))
+# sns.heatmap(pivot, annot=True, fmt=".3f", cmap="YlGnBu", cbar_kws={'label': 'Accuracy'})
 
-plt.title("Acuratețe Random Forest în funcție de % in-bag și număr de feature-uri")
-plt.xlabel("Număr de feature-uri testate per split")
-plt.ylabel("% in-bag sample")
+# plt.title("Acuratețe Random Forest în funcție de % in-bag și număr de feature-uri")
+# plt.xlabel("Număr de feature-uri testate per split")
+# plt.ylabel("% in-bag sample")
 
-plt.tight_layout()
-plt.savefig("grafic_random_forest.png")  # salvează imaginea
+# plt.tight_layout()
+# plt.savefig("grafic_random_forest.png")  # salvează imaginea
+# plt.show()
+
+# sns.countplot(x='Genus', data=df)
+# plt.title('Distribuția claselor (Genus)')
+# plt.xticks(rotation=45)
+# plt.show()
+
+# === Încarcă datele
+df = pd.read_csv("Frogs_MFCCs.csv")  # pune aici calea corectă
+
+# === Coloana pe care vrei să analizezi outlierii (exemplu: MFCC_1)
+coloana = 'Family'  # schimbă cu ce coloană vrei
+
+# === Vizualizare înainte de filtrare
+plt.figure(figsize=(12, 5))
+sns.boxplot(x=df[coloana])
+plt.title(f'Distribuția {coloana} înainte de eliminarea outlierilor')
 plt.show()
+
+# === Eliminare outlieri (metoda IQR)
+Q1 = df[coloana].quantile(0.25)
+Q3 = df[coloana].quantile(0.75)
+IQR = Q3 - Q1
+limita_min = Q1 - 1.5 * IQR
+limita_max = Q3 + 1.5 * IQR
+
+df_fara_outlieri = df[(df[coloana] >= limita_min) & (df[coloana] <= limita_max)]
+
+# === Vizualizare după eliminare
+plt.figure(figsize=(12, 5))
+sns.boxplot(x=df_fara_outlieri[coloana])
+plt.title(f'Distribuția {coloana} după eliminarea outlierilor')
+plt.show()
+
+# === Optional: compară numărul de rânduri
+print(f"Înainte: {len(df)} înregistrări")
+print(f"   După: {len(df_fara_outlieri)} înregistrări")
